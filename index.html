@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech to Text</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #6c757d; /* Grey background color */
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            margin-top: 20px;
+            font-size: 3em;
+            color: #ffa500; /* Orange color */
+            text-transform: uppercase; /* Capital letters */
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        #button-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+            width: 90%;
+            max-width: 800px;
+        }
+        #start-btn, #stop-btn, #refresh-btn {
+            margin: 0 10px;
+        }
+        #start-btn {
+            background-color: #28a745;
+        }
+        #stop-btn {
+            background-color: #dc3545;
+        }
+        #refresh-btn {
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 50%;
+            padding: 10px;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px; /* Adjusted font size for refresh symbol */
+        }
+        button {
+            padding: 15px 25px;
+            font-size: 16px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        #start-btn:hover {
+            background-color: #218838;
+        }
+        #stop-btn:hover {
+            background-color: #c82333;
+        }
+        #refresh-btn:hover {
+            background-color: #0056b3;
+        }
+        #translate-hindi, #translate-spanish, #translate-french, #translate-korean, #translate-telugu {
+            background-color: #007bff;
+            color: #fff;
+            margin: 5px;
+        }
+        #translate-hindi:hover, #translate-spanish:hover, #translate-french:hover, #translate-korean:hover, #translate-telugu:hover {
+            background-color: #0056b3;
+        }
+        .box-container {
+            width: 90%;
+            max-width: 800px;
+            margin-top: 20px;
+            padding: 10px;
+        }
+        .box-container h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.5em;
+            color: #333; /* Light black color */
+        }
+        #text-box, #translation-box {
+            border: 1px solid #ddd;
+            padding: 20px;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            color: #333;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        #text-box {
+            height: 250px;
+        }
+        #translation-box {
+            height: 200px;
+        }
+        @media (max-width: 600px) {
+            button {
+                display: block;
+                margin: 10px auto;
+                width: 80%;
+            }
+            #button-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Speech to Text</h1>
+    <div id="button-container">
+        <button id="start-btn">Start</button>
+        <button id="refresh-btn">&#x21bb;</button> <!-- Refresh symbol -->
+        <button id="stop-btn">Stop</button>
+    </div>
+    <div id="button-container">
+        <button id="translate-hindi">Translate to Hindi</button>
+        <button id="translate-spanish">Translate to Spanish</button>
+        <button id="translate-french">Translate to French</button>
+        <button id="translate-korean">Translate to Korean</button>
+        <button id="translate-telugu">Translate to Telugu</button> <!-- New Telugu button -->
+    </div>
+    <div class="box-container">
+        <h2>Speaking Text</h2>
+        <div id="text-box"></div>
+    </div>
+    <div class="box-container">
+        <h2>Translated Text</h2>
+        <div id="translation-box"></div>
+    </div>
+
+    <script>
+        let isListening = false;
+
+        document.getElementById('start-btn').onclick = function() {
+            fetch('/start')
+                .then(response => response.json())
+                .then(data => console.log(data.status))
+                .catch(error => console.error('Error:', error));
+            isListening = true;
+            updateText();
+        };
+
+        document.getElementById('stop-btn').onclick = function() {
+            fetch('/stop')
+                .then(response => response.json())
+                .then(data => console.log(data.status))
+                .catch(error => console.error('Error:', error));
+            isListening = false;
+        };
+
+        function updateText() {
+            if (!isListening) return;
+
+            fetch('/text')
+                .then(response => response.json())
+                .then(data => {
+                    const textBox = document.getElementById('text-box');
+                    if (data.text) {
+                        textBox.innerText = data.text; // Replace text box content with accumulated text
+                        textBox.scrollTop = textBox.scrollHeight; // Auto-scroll to the bottom
+                    }
+                    setTimeout(updateText, 100); // Poll every 100ms
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function translateText(lang) {
+            fetch(`/translate/${lang}`)
+                .then(response => response.json())
+                .then(data => {
+                    const translationBox = document.getElementById('translation-box');
+                    if (data.text) {
+                        translationBox.innerText = data.text; // Show translated text
+                    } else if (data.error) {
+                        translationBox.innerText = `Error: ${data.error}`;
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        document.getElementById('translate-hindi').onclick = () => translateText('hi');
+        document.getElementById('translate-spanish').onclick = () => translateText('es');
+        document.getElementById('translate-french').onclick = () => translateText('fr');
+        document.getElementById('translate-korean').onclick = () => translateText('ko');
+        document.getElementById('translate-telugu').onclick = () => translateText('te'); // New Telugu translation
+
+        document.getElementById('refresh-btn').onclick = function() {
+            fetch('/clear')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('text-box').innerText = '';
+                    document.getElementById('translation-box').innerText = '';
+                })
+                .catch(error => console.error('Error:', error));
+        };
+    </script>
+</body>
+</html>
